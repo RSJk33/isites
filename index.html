@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        #pdf-container {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualizar PDF</h1>
+    <div id="pdf-container">
+        <iframe id="pdf-viewer" width="100%" height="100%" style="border: none;"></iframe>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script>
+        // Configura o PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js';
+
+        // URL do arquivo PDF no Google Drive (substitua ARQUIVO_ID pelo ID real)
+        const pdfUrl = 'https://drive.google.com/file/d/0BxI-nhdzpFN6Qk44Tm5RSWQtSmM/view?resourcekey=0-ryXGVUD9qMK8ewYizzQm0Q';
+
+        // Carrega e renderiza o PDF
+        async function loadPDF() {
+            try {
+                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                const viewer = document.getElementById('pdf-viewer');
+                viewer.src = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}#toolbar=0`;
+            } catch (error) {
+                console.error('Erro ao carregar o PDF:', error);
+                alert('Não foi possível carregar o PDF. Verifique o link ou tente novamente.');
+            }
+        }
+
+        // Desativa download e impressão via CSS e JavaScript
+        function disablePrintAndDownload() {
+            const viewer = document.getElementById('pdf-viewer');
+            viewer.onload = () => {
+                try {
+                    const iframeDoc = viewer.contentDocument || viewer.contentWindow.document;
+
+                    // Injeta CSS para ocultar botões de download e impressão
+                    const style = iframeDoc.createElement('style');
+                    style.textContent = `
+                        #toolbarViewerRight,
+                        #download,
+                        #print,
+                        button[title="Download"],
+                        button[title="Print"],
+                        .toolbarButton.download,
+                        .toolbarButton.print,
+                        #download.hidden,
+                        #print.hidden {
+                            display: none !important;
+                        }
+                    `;
+                    iframeDoc.head.appendChild(style);
+
+                    // Desativa eventos de clique nos botões (fallback)
+                    const buttons = iframeDoc.querySelectorAll('#download, #print, .toolbarButton.download, .toolbarButton.print, button[title="Download"], button[title="Print"]');
+                    buttons.forEach(button => {
+                        button.disabled = true;
+                        button.style.display = 'none';
+                        button.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        });
+                    });
+
+                    // Bloqueia impressão via janela
+                    iframeDoc.defaultView.onbeforeprint = () => false;
+                } catch (error) {
+                    console.error('Erro ao desativar botões:', error);
+                }
+            };
+        }
+
+        loadPDF();
+        disablePrintAndDownload();
+    </script>
+</body>
+</html>
